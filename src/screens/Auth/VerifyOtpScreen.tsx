@@ -1,47 +1,85 @@
 import { CommonButton } from '@/components/common/CommonButton';
+import { showToast } from '@/components/common/CommonToast';
 import { AuthLayout } from '@/components/layouts/Auth/AuthLayout';
 import { useAppStyle } from '@/hooks/useAppStyles';
+import { useCountdown } from '@/hooks/useCountdown';
 import { AuthStackParamList } from '@/navigation/types';
 import HeaderAuth from '@/screens/Auth/components/HeaderAuth';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { resendOtpAction, selectResendOtp, selectVerifyEmail } from '@/store/reducers/authSlice';
+import { RouteProp, useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Toast from 'react-native-toast-message';
-import { useIsFocused } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+
 const { width: screenWidth } = Dimensions.get('window');
 const OTP_LENGTH = 6;
-const RESEND_OTP_TIME_LIMIT = 15; // 60 giây
+const RESEND_OTP_TIME_LIMIT = 180;
+
 type VerifyScreenNavigationProp = StackNavigationProp<
   AuthStackParamList,
   'VerifyOtp'
 >;
 
 export default function VerifyOtpScreen() {
-  const { colors, textStyles: typography } = useAppStyle();
+  const { colors } = useAppStyle();
   const route = useRoute<RouteProp<AuthStackParamList, 'VerifyOtp'>>();
-  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
-  const [timeLeft, setTimeLeft] = useState(RESEND_OTP_TIME_LIMIT); // 60 giây
-  const [isResendEnabled, setIsResendEnabled] = useState(false);
-  const inputsRef = useRef<(TextInput | null)[]>([]);
   const navigation = useNavigation<VerifyScreenNavigationProp>();
   const isFocused = useIsFocused();
+  const dispatch = useDispatch();
+  const { status: resendOtpStatus, error: resendOtpError, data: resendOtpData, params: resendOtpParams } = useSelector(selectResendOtp);
+  const { status: verifyOtpStatus, error: verifyOtpError, data: verifyOtpData, params: verifyOtpParams } = useSelector(selectVerifyEmail);
+  const { email, type } = route.params;
   useEffect(() => {
-    if (!isFocused) return;
-    if (timeLeft <= 0) {
-      setIsResendEnabled(true);
-      return;
+    if (resendOtpStatus === 'error') {
+      showToast({ type: 'error', title: 'Resend OTP Error', message: resendOtpError || '' });
+    }
+    if (verifyOtpStatus === 'error') {
+      showToast({ type: 'error', title: 'Verify OTP Error', message: verifyOtpError || '' });
     }
 
-    const timer = setTimeout(() => {
-      setTimeLeft(timeLeft - 1);
-    }, 1000);
+  }, [resendOtpStatus, verifyOtpStatus]);
 
-    return () => clearTimeout(timer);
-  }, [timeLeft, isFocused]);
+  useEffect(() => {
+    if (resendOtpStatus === 'success') {
+      showToast({ type: 'success', title: 'Resend OTP Success', message: 'Resend OTP successfully' });
+    }
+    if (verifyOtpStatus === 'success') {
+      showToast({ type: 'success', title: 'Verify OTP Success', message: 'Verify OTP successfully' });
+      navigation.navigate('Login');
+    }
+  }, [resendOtpStatus, verifyOtpStatus]);
+  // --- Hook countdown ---
+  const {
+    formattedTime,
+    remainingSeconds,
+    isActive,
+    restart,
+    pause
+  } = useCountdown({
+    initialSeconds: RESEND_OTP_TIME_LIMIT,
+    autoStart: true,
+    onCountdownEnd: () => {
+      console.log('Countdown ended');
+      showToast({
+        type: 'warning',
+        title: 'OTP expired',
+        message: 'Please resend code to continue.'
+      })
+    }
+  });
+
+  // --- OTP state ---
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+  const inputsRef = useRef<(TextInput | null)[]>([]);
+
+  // Khi rời khỏi screen -> dừng đếm
+  useEffect(() => {
+    if (!isFocused) pause();
+  }, [isFocused, pause]);
 
   const handleChange = (text: string, index: number) => {
-    if (!/^\d*$/.test(text)) return; // chỉ cho phép số
+    if (!/^\d*$/.test(text)) return;
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
@@ -49,71 +87,58 @@ export default function VerifyOtpScreen() {
     if (text && index < inputsRef.current.length - 1) {
       inputsRef.current[index + 1]?.focus();
     }
-
     if (!text && index > 0) {
       inputsRef.current[index - 1]?.focus();
     }
   };
-  console.log("Time left:", timeLeft);
+
   const handleVerify = () => {
     const otpCode = otp.join('');
-    console.log('OTP entered:', otpCode, route.params.email);
-    if (timeLeft === 0) {
-
-      Toast.show({
-        type: 'error',
-        text1: 'Code expired.',
-        text2: 'Please check your OTP and try again.'
+    if (remainingSeconds === 0) {
+      showToast({
+        type: 'warning',
+        title: 'OTP expired',
+        message: 'Please resend code to continue.'
       })
-    } else {
-      if (otpCode === '123456' && timeLeft > 0) {
-
-        Toast.show({
-          type: 'success',
-          text1: 'Verification successful!',
-          text2: 'You can now access your account and start using the app.'
-        })
-        navigation.navigate('Login')
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Verification failed.',
-          text2: 'Please check your OTP and try again.'
-        })
-      }
+      return;
     }
+
+    if (otpCode === '123456') {
+      showToast({
+        type: 'success',
+        title: 'Verification successful',
+        message: 'You have successfully verified your OTP.'
+      })
+      navigation.navigate('Login');
+    } else {
+      showToast({
+        type: 'error',
+        title: 'Verification failed',
+        message: 'The OTP you entered is incorrect. Please try again.'
+      })
+    }
+  };
+
+  const handleResetOtp = () => {
+    setOtp(Array(OTP_LENGTH).fill(''));
+    inputsRef.current[0]?.focus();
   }
 
   const handleResendOtp = () => {
-    if (!isResendEnabled) return;
-
-    // Reset timer
-    setTimeLeft(RESEND_OTP_TIME_LIMIT);
-    setIsResendEnabled(false);
-
-    // Clear OTP fields
-    setOtp(['', '', '', '', '', '']);
-
-    // Focus vào ô đầu tiên
+    if (remainingSeconds > 0) return;
+    restart();
+    setOtp(Array(OTP_LENGTH).fill(''));
     inputsRef.current[0]?.focus();
-
-    // TODO: gọi API gửi lại OTP
-    console.log('Resending OTP...');
+    console.log('Resending OTP...', { email, recaptcha: '', purpose: type });
+    dispatch(resendOtpAction({ email, recaptcha: '', purpose: type }));
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  // Tính toán kích thước OTP input cho responsive
+  // Responsive input
   const otpInputSize = Math.min(60, (screenWidth - 80) / 6);
 
   return (
     <AuthLayout>
       <View className="flex-1 justify-between">
-        {/* Header Section */}
         <View className="flex-1 max-h-40">
           <HeaderAuth
             title="OTP Verification"
@@ -121,7 +146,6 @@ export default function VerifyOtpScreen() {
           />
         </View>
 
-        {/* Main Content */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1 justify-center"
@@ -135,10 +159,7 @@ export default function VerifyOtpScreen() {
                     key={index}
                     style={{
                       shadowColor: '#000',
-                      shadowOffset: {
-                        width: 0,
-                        height: 2,
-                      },
+                      shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.1,
                       shadowRadius: 3,
                       elevation: 3,
@@ -170,7 +191,7 @@ export default function VerifyOtpScreen() {
                 ))}
               </View>
 
-              {/* Timer Section */}
+              {/* Timer */}
               <View className="items-center mb-2">
                 <Text
                   style={{
@@ -178,31 +199,36 @@ export default function VerifyOtpScreen() {
                     fontSize: 15,
                     fontWeight: '500',
                   }}
-                  className="text-center"
                 >
-                  Code expires in {' '}
+                  Code expires in{' '}
                   <Text
                     style={{
-                      color: timeLeft <= 10 ? colors.error : colors.primary,
+                      color: remainingSeconds <= 10 ? colors.error : colors.primary,
                       fontWeight: '700',
                       fontSize: 16,
                     }}
                   >
-                    {formatTime(timeLeft)}
+                    {formattedTime}
                   </Text>
                 </Text>
               </View>
             </View>
 
             {/* Verify Button */}
-            <View className="mb-8">
+            <View className="mb-8 flex-col gap-4">
               <CommonButton
                 title="Verify & Continue"
                 onPress={handleVerify}
                 variant="gradient"
                 size="large"
-                // loading={status === 'loading'}
-                disabled={otp.some(digit => !digit)}
+                disabled={otp.some((digit) => !digit)}
+                className="rounded-2xl"
+              />
+              <CommonButton
+                title="Reset"
+                onPress={handleResetOtp}
+                variant="outline"
+                size="large"
                 className="rounded-2xl"
               />
             </View>
@@ -226,31 +252,34 @@ export default function VerifyOtpScreen() {
 
               <TouchableOpacity
                 onPress={handleResendOtp}
-                disabled={!isResendEnabled}
-                className={`py-3 px-6 rounded-2xl ${isResendEnabled ? 'opacity-100' : 'opacity-60'
+                disabled={remainingSeconds > 0}
+                className={`py-3 px-6 rounded-2xl ${remainingSeconds <= 0 ? 'opacity-100' : 'opacity-60'
                   }`}
                 style={{
-                  backgroundColor: isResendEnabled ? colors.primary + '20' : 'transparent',
+                  backgroundColor:
+                    remainingSeconds <= 0 ? colors.primary + '20' : 'transparent',
                   borderWidth: 1,
-                  borderColor: isResendEnabled ? colors.primary : colors.border,
+                  borderColor:
+                    remainingSeconds <= 0 ? colors.primary : colors.border,
                 }}
               >
                 <Text
                   style={{
-                    color: isResendEnabled ? colors.primary : colors.textDisabled,
+                    color: remainingSeconds <= 0 ? colors.primary : colors.textDisabled,
                     fontSize: 15,
                     fontWeight: '600',
                     textAlign: 'center',
                   }}
                 >
-                  {isResendEnabled ? 'Resend Code' : `Resend available in ${formatTime(timeLeft)}`}
+                  {remainingSeconds <= 0
+                    ? 'Resend Code'
+                    : `Resend available in ${formattedTime}`}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
 
-        {/* Footer Spacing */}
         <View className="h-8" />
       </View>
     </AuthLayout>

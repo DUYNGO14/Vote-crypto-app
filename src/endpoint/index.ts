@@ -1,0 +1,9 @@
+export * as authEndpoint from './auth.enpoint';
+export * as userEndpoint from './user.endpoint';
+export * as walletEndpoint from './wallet.endpoint';
+export * as missionEndpoint from './mission.endpoint';
+export * as friendsEndpoint from './friends.endpoint';
+export * as uploadEndpoint from './upload.endpoint';
+export * as miningEndpoint from './mining.endpoint';
+export * as referralEndpoint from './referral.endpoint';
+export * as newsEndpoint from './news.endpoint';

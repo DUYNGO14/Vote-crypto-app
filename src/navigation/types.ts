@@ -5,7 +5,7 @@ export type AuthStackParamList = {
   ForgotPassword: undefined;
   NewPassword: { resetToken: string };
   ChangePassword: undefined;
-  VerifyOtp: { email: string;};
+  VerifyOtp: { email: string, type: string };
   WebView: { url: string; title?: string };
 };
 

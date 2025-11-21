@@ -1,28 +1,25 @@
 // LoginScreen.tsx
 import { CommonButton } from '@/components/common/CommonButton';
 import { CommonInput } from '@/components/common/CommonInput';
+import { showToast } from '@/components/common/CommonToast';
 import { AuthLayout } from '@/components/layouts/Auth/AuthLayout';
 import { useAppStyle } from '@/hooks/useAppStyles';
+import { isValidEmail } from '@/hooks/validate';
 import { AuthStackParamList } from '@/navigation/types';
-import { useTheme } from '@/providers/ThemeProvider';
-import { AuthFooter } from '@/screens/Auth/components/AuthFooter';
 import GroupButtonSocial from '@/screens/Auth/components/GroupButtonSocial';
 import HeaderAuth from '@/screens/Auth/components/HeaderAuth';
 import { RootState } from '@/store';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Icons } from '@utils/icons';
 import Checkbox from 'expo-checkbox';
-import { set } from 'lodash';
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 type NavigationProp = StackNavigationProp<AuthStackParamList, 'RegisterEmail'>;
 
@@ -33,50 +30,60 @@ export default function RegisterEmailScreen() {
   const [displayName, setDisplayName] = useState('');
   const [nickname, setNickname] = useState('');
   const [fullName, setFullName] = useState('');
-  const [errors, setErrors] = useState({ username: '', displayName: '', nickname: '', fullName: '' });
-  const [isChecked, setChecked] = useState(false);
-  const dispatch = useDispatch();
+  const [errors, setErrors] = useState({ username: '', displayName: '', nickname: '', fullName: '', agree: '' });
+  const [agree, setAgree] = useState(false);
   const { status, error, data, params } = useSelector((state: RootState) => state.auth.signin);
 
   console.log('Signin state:', { status, error, data, params });
   useEffect(() => {
     if (status === 'error' && error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Login Failed',
-        text2: error,
-        visibilityTime: 3000,
-        autoHide: true,
-      });
+      showToast({ type: 'error', title: 'Error', message: error });
     }
   }, [status, error]);
 
   const handleRegisterEmail = () => {
     let hasError = false;
-    const newErrors = { username: '', displayName: '', nickname: '', fullName: '' };
+    const newErrors = { username: '', displayName: '', nickname: '', fullName: '', agree: '' };
 
     if (!displayName.trim()) {
       newErrors.displayName = 'Please enter your display name';
       hasError = true;
     }
-    if (displayName.length < 4) {
-      newErrors.displayName = 'Display name must be at least 4 characters';
+    if (displayName.length < 4 || displayName.length > 35) {
+      newErrors.displayName = 'Display name must be between 4 and 35 characters';
       hasError = true;
     }
 
     if (!username.trim()) {
-      newErrors.username = 'Please enter your username';
+      newErrors.username = 'Please enter your email.';
+      hasError = true;
+    } else {
+      const inputType = isValidEmail(username.trim());
+
+      if (!inputType) {
+        newErrors.username = 'Please enter a valid email.';
+        hasError = true;
+      }
+    }
+
+    if (!agree) {
+      newErrors.agree = 'Please accept the terms and conditions';
       hasError = true;
     }
 
-    setErrors(newErrors);
+    if (nickname) {
+      if (nickname.length < 4 || nickname.length > 35) {
+        newErrors.nickname = 'Nickname must be between 4 and 35 characters';
+        hasError = true;
+      }
+    }
 
+    setErrors(newErrors);
     if (!hasError) {
       console.log('Login:', { username });
       navigation.navigate('RegisterPassword', { username, displayName, nickname, fullName });
     }
   };
-  const { toggleTheme } = useTheme();
   return (
     <AuthLayout>
       <HeaderAuth title="Create an account!" subtitle="Sign up with your email" />
@@ -84,7 +91,7 @@ export default function RegisterEmailScreen() {
       <View className="p-2">
         <CommonInput
           label="Username"
-          placeholder="Enter your username"
+          placeholder="Enter your email"
           value={username}
           onChangeText={(text) => {
             setUsername(text);
@@ -129,12 +136,12 @@ export default function RegisterEmailScreen() {
           autoCapitalize="none"
         />
         {/* Remember Me & Forgot Password */}
-        <View className="mb-6 flex-row justify-between items-center">
+        <View className="mb-6 flex-col">
           <View className="flex-row items-center">
             <Checkbox
-              value={isChecked}
-              onValueChange={setChecked}
-              color={isChecked ? colors.primary : undefined}
+              value={agree}
+              onValueChange={setAgree}
+              color={agree ? colors.primary : undefined}
               style={{ width: 20, height: 20 }}
             />
             <Text
@@ -157,7 +164,18 @@ export default function RegisterEmailScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          <View>
+            {errors.agree && (
+              <Text
+                className="text-sm text-red-500"
+                style={{ color: colors.error }}
+              >
+                {errors.agree}
+              </Text>
+            )}
+          </View>
         </View>
+
 
         {/* Login Button - Using CommonButton with Gradient */}
         <CommonButton
@@ -165,8 +183,6 @@ export default function RegisterEmailScreen() {
           onPress={handleRegisterEmail}
           variant="gradient"
           size="large"
-          loading={status === 'loading'}
-          disabled={status === 'loading'}
           className="mb-6"
         />
         {/* Divider */}

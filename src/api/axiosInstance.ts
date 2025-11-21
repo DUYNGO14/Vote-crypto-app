@@ -1,5 +1,5 @@
 // src/services/AxiosService.ts
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, {AxiosInstance, AxiosRequestConfig, AxiosResponse} from 'axios';
 import {
   clearTokens,
   getAccessToken,
@@ -7,7 +7,7 @@ import {
   saveAccessToken,
   saveRefreshToken,
 } from '@/utils/token';
-import { Config } from '@/config/env';
+import {Config} from '@/config/env';
 
 // ==================== TYPES ====================
 type FailedQueueItem = {
@@ -35,14 +35,11 @@ export class AxiosService {
   private failedQueue: FailedQueueItem[] = [];
   private readonly MAX_QUEUE_SIZE = 50;
 
-  constructor(
-    baseURL: string = Config.apiBaseUrl,
-    timeout: number = Config.apiTimeout || 10000
-  ) {
+  constructor(baseURL: string = Config.apiBaseUrl, timeout: number = Config.apiTimeout || 10000) {
     this.axiosInstance = axios.create({
       baseURL,
       timeout,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {'Content-Type': 'application/json'},
     });
 
     this.setupInterceptors();
@@ -59,7 +56,7 @@ export class AxiosService {
   private setupInterceptors() {
     // === Request interceptor ===
     this.axiosInstance.interceptors.request.use(
-      async (config) => {
+      async config => {
         const token = await getAccessToken();
         if (token) {
           config.headers = config.headers ?? {};
@@ -68,18 +65,19 @@ export class AxiosService {
         this.log(`[API REQUEST] ${config.method?.toUpperCase()} ${config.url}`);
         return config;
       },
-      (error) => Promise.reject(error)
+      error => Promise.reject(error),
     );
 
     // === Response interceptor ===
     this.axiosInstance.interceptors.response.use(
-      (response) => this.normalizeResponse(response),
-      (error) => this.handleResponseError(error)
+      response => this.normalizeResponse(response),
+      error => this.handleResponseError(error),
     );
   }
 
   // ==================== NORMALIZE RESPONSE ====================
   private normalizeResponse(response: AxiosResponse): AxiosResponse {
+    console.log("RESPONE API", response.data)
     this.log(`[API RESPONSE] ${response.status} ${response.config.url}`);
 
     const code = response.data?.code ?? response.status ?? 200;
@@ -105,12 +103,12 @@ export class AxiosService {
         : undefined;
 
     // ✅ Modify response.data instead of creating new object
-    response.data = { 
-      code, 
-      success, 
-      message, 
-      data, 
-      ...(meta && { meta }) 
+    response.data = {
+      code,
+      success,
+      message,
+      data,
+      ...(meta && {meta}),
     };
 
     return response;
@@ -133,9 +131,42 @@ export class AxiosService {
     }
 
     const status = error.response?.status;
+    const responseData = error.response?.data;
+
+    this.log(`[API ERROR] ${status} ${error.config?.url}`, responseData);
 
     // --- Handle token expired (401) ---
-    if (status === 401 && !originalRequest._retry) {
+    if (status === 401) {
+      // Kiểm tra xem đây có phải là lỗi từ refresh token endpoint không
+      if (originalRequest.url?.includes('/auth/refresh-token')) {
+        this.log('[REFRESH TOKEN FAILED] Clearing tokens and redirecting to login');
+        await clearTokens();
+        this.processQueue(error, null);
+
+        return Promise.reject({
+          code: 401,
+          success: false,
+          message: 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại',
+          data: null,
+          requiresLogin: true,
+        });
+      }
+
+      // Kiểm tra nếu request đã được retry rồi
+      if (originalRequest._retry) {
+        this.log('[REQUEST ALREADY RETRIED] Redirecting to login');
+        await clearTokens();
+
+        return Promise.reject({
+          code: 401,
+          success: false,
+          message: 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại',
+          data: null,
+          requiresLogin: true,
+        });
+      }
+
+      // Kiểm tra queue size
       if (this.failedQueue.length >= this.MAX_QUEUE_SIZE) {
         return Promise.reject({
           code: 429,
@@ -145,45 +176,67 @@ export class AxiosService {
         });
       }
 
+      // Nếu đang refresh, thêm vào queue
       if (this.isRefreshing) {
         return new Promise((resolve, reject) => {
-          this.failedQueue.push({ resolve, reject, config: originalRequest });
+          this.failedQueue.push({resolve, reject, config: originalRequest});
         });
       }
 
+      // Bắt đầu refresh token
       originalRequest._retry = true;
       this.isRefreshing = true;
 
       try {
         const refreshToken = await getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token available');
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+        this.log('[DEBUG] Refresh token:', refreshToken);
+        this.log('[REFRESHING TOKEN] Starting refresh process...');
 
-        const refreshUrl = `${Config.apiBaseUrl}/auth/refresh-token`;
-        const { data } = await axios.post(
+        const refreshUrl = `${Config.apiBaseUrl}/auth/login/refreshToken`;
+        const {data} = await axios.post(
           refreshUrl,
-          { refreshToken },
-          { headers: { 'Content-Type': 'application/json' }, timeout: 10000 }
+          {refreshToken},
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              // Không thêm Authorization header cho refresh request
+            },
+            timeout: 10000,
+          },
         );
 
         const newAccessToken = data?.data?.accessToken ?? data?.accessToken;
         const newRefreshToken = data?.data?.refreshToken ?? data?.refreshToken;
 
-        if (!newAccessToken) throw new Error('Refresh failed: no new access token');
+        if (!newAccessToken) {
+          throw new Error('Refresh failed: no new access token');
+        }
 
         await saveAccessToken(newAccessToken);
-        if (newRefreshToken) await saveRefreshToken(newRefreshToken);
+        if (newRefreshToken) {
+          await saveRefreshToken(newRefreshToken);
+        }
 
         this.log('[REFRESH SUCCESS] New token set.');
 
+        // Xử lý queue và retry request gốc
         this.processQueue(null, newAccessToken);
 
+        // Cập nhật header và retry request gốc
+        originalRequest.headers = originalRequest.headers ?? {};
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
         return this.axiosInstance(originalRequest);
-      } catch (err) {
-        console.error('[REFRESH FAILED]', err);
-        this.processQueue(err, null);
+      } catch (refreshError) {
+        console.error('[REFRESH FAILED]', refreshError);
+
+        // Clear tokens và process queue với lỗi
         await clearTokens();
-        
+        this.processQueue(refreshError, null);
+
         return Promise.reject({
           code: 401,
           success: false,
@@ -196,18 +249,22 @@ export class AxiosService {
       }
     }
 
-    this.log('[API ERROR]', error.message, error.config?.url);
+    // --- Handle other errors ---
     return Promise.reject({
       code: status || error.code || 500,
       success: false,
-      message: error.response?.data?.message || error.message || 'Unknown error',
+      message: error.response?.data?.error || error.response?.data?.message || error.message || 'Unknown error',
       data: error.response?.data ?? null,
     });
   }
 
   // ==================== QUEUE HANDLER ====================
   private processQueue(error: any, token: string | null) {
-    this.failedQueue.forEach((prom) => {
+    // Tạo bản copy của queue để tránh mutation trong khi xử lý
+    const queueCopy = [...this.failedQueue];
+    this.failedQueue = [];
+
+    queueCopy.forEach(prom => {
       if (error) {
         prom.reject(error);
       } else {
@@ -215,54 +272,47 @@ export class AxiosService {
           prom.config.headers = prom.config.headers ?? {};
           prom.config.headers.Authorization = `Bearer ${token}`;
         }
+        // Retry request với config đã được cập nhật
         prom.resolve(this.axiosInstance(prom.config));
       }
     });
-    this.failedQueue = [];
   }
 
   // ==================== PUBLIC METHODS ====================
-  public get<T = any>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<NormalizedResponse<T>> {
-    return this.axiosInstance.get(url, config)
-      .then(res => res.data as NormalizedResponse<T>);
+  public get<T = any>(url: string, config?: AxiosRequestConfig): Promise<NormalizedResponse<T>> {
+    return this.axiosInstance.get(url, config).then(res => res.data as NormalizedResponse<T>);
   }
 
   public post<T = any>(
     url: string,
     data?: any,
-    config?: AxiosRequestConfig
+    config?: AxiosRequestConfig,
   ): Promise<NormalizedResponse<T>> {
-    return this.axiosInstance.post(url, data, config)
+    return this.axiosInstance
+      .post(url, data, config)
       .then(res => res.data as NormalizedResponse<T>);
   }
 
   public put<T = any>(
     url: string,
     data?: any,
-    config?: AxiosRequestConfig
+    config?: AxiosRequestConfig,
   ): Promise<NormalizedResponse<T>> {
-    return this.axiosInstance.put(url, data, config)
-      .then(res => res.data as NormalizedResponse<T>);
+    return this.axiosInstance.put(url, data, config).then(res => res.data as NormalizedResponse<T>);
   }
 
   public patch<T = any>(
     url: string,
     data?: any,
-    config?: AxiosRequestConfig
+    config?: AxiosRequestConfig,
   ): Promise<NormalizedResponse<T>> {
-    return this.axiosInstance.patch(url, data, config)
+    return this.axiosInstance
+      .patch(url, data, config)
       .then(res => res.data as NormalizedResponse<T>);
   }
 
-  public delete<T = any>(
-    url: string,
-    config?: AxiosRequestConfig
-  ): Promise<NormalizedResponse<T>> {
-    return this.axiosInstance.delete(url, config)
-      .then(res => res.data as NormalizedResponse<T>);
+  public delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<NormalizedResponse<T>> {
+    return this.axiosInstance.delete(url, config).then(res => res.data as NormalizedResponse<T>);
   }
 
   // ==================== UTILITY ====================

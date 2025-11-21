@@ -1,14 +1,14 @@
-import "./global.css"
-import React, { useCallback, useEffect, useState } from 'react';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import * as SplashScreen from 'expo-splash-screen';
-import { useFonts } from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useCallback, useEffect, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import "./global.css";
 
+import { CommonToast } from "@/components/common/CommonToast";
+import AppNavigator from '@/navigation/AppNavigator';
 import ReduxProviders from '@/providers/ReduxProviders';
 import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
-import AppNavigator from '@/navigation/AppNavigator';
-import Toast from 'react-native-toast-message';
 import { View } from "react-native";
 const queryClient = new QueryClient();
 
@@ -57,7 +57,7 @@ export default function App() {
         <ThemeProvider>
           <SafeAreaProvider> {/* <- thêm flex:1 ở đây nếu cần */}
             <AppContent />
-            <Toast topOffset={60} visibilityTime={2500} position="top" />
+            <CommonToast />
           </SafeAreaProvider>
         </ThemeProvider>
       </QueryClientProvider>

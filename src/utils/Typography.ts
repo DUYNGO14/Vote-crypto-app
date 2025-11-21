@@ -6,6 +6,7 @@ export const Typography = StyleSheet.create({
   H04: { fontFamily: 'Roboto-SemiBold', fontWeight: '600', fontSize: 34 },
   H03: { fontFamily: 'Roboto-SemiBold', fontWeight: '600', fontSize: 27 },
   H02: { fontFamily: 'Roboto-SemiBold', fontWeight: '600', fontSize: 22 },
+  H02Bold: { fontFamily: 'Roboto-Bold', fontWeight: '600', fontSize: 22 },
   H01: { fontFamily: 'Roboto-Medium', fontWeight: '600', fontSize: 16 },
   H01Bold: { fontFamily: 'Roboto-Bold', fontWeight: '600', fontSize: 16 },
   Text: { fontFamily: 'Roboto-Regular', fontWeight: '400', fontSize: 14 },

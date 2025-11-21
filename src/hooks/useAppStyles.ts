@@ -10,6 +10,7 @@ export const useAppStyle = () => {
     H04: { ...Typography.H04, color: colors.text },
     H03: { ...Typography.H03, color: colors.text },
     H02: { ...Typography.H02, color: colors.text },
+    H02Bold: { ...Typography.H02Bold, color: colors.text },
     H01: { ...Typography.H01, color: colors.text },
     H01Bold: { ...Typography.H01Bold, color: colors.text },
     Text: { ...Typography.Text, color: colors.text },

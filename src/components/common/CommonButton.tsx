@@ -1,12 +1,13 @@
 // CommonButton.tsx
-import React from 'react';
-import { TouchableOpacity, Text, View, ActivityIndicator, ColorValue } from 'react-native';
+import React, { useEffect } from 'react';
+import { TouchableOpacity, Text, View, ActivityIndicator, ColorValue, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, withTiming, useAnimatedStyle, Easing, withRepeat } from 'react-native-reanimated';
 import { useAppStyle } from '@/hooks/useAppStyles';
 
 interface CommonButtonProps {
   title: string;
-  onPress: () => void;
+  onPress?: () => void;
   variant?: 'gradient' | 'primary' | 'secondary' | 'outline';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
@@ -18,6 +19,9 @@ interface CommonButtonProps {
   textColor?: string;
   borderColor?: string;
   className?: string;
+  forceOpacity?: boolean;
+  progressDuration?: number; // ms
+  isActive?: boolean;
 }
 
 export const CommonButton: React.FC<CommonButtonProps> = ({
@@ -34,39 +38,25 @@ export const CommonButton: React.FC<CommonButtonProps> = ({
   textColor,
   borderColor,
   className = '',
+  forceOpacity = false,
+  progressDuration,
+  isActive,
 }) => {
   const { colors } = useAppStyle();
 
-  // Size configurations
   const sizeConfig = {
-    small: {
-      height: 'h-10',
-      paddingX: 'px-4',
-      textSize: 'text-sm',
-      iconSize: 16,
-    },
-    medium: {
-      height: 'h-14',
-      paddingX: 'px-6',
-      textSize: 'text-base',
-      iconSize: 20,
-    },
-    large: {
-      height: 'h-16',
-      paddingX: 'px-8',
-      textSize: 'text-lg',
-      iconSize: 24,
-    },
+    small: { height: 'h-10', paddingX: 'px-4', textSize: 'text-sm', iconSize: 16 },
+    medium: { height: 'h-14', paddingX: 'px-6', textSize: 'text-base', iconSize: 20 },
+    large: { height: 'h-16', paddingX: 'px-8', textSize: 'text-lg', iconSize: 24 },
   };
-
   const config = sizeConfig[size];
 
-  // ✅ Sửa lỗi type: Đảm bảo luôn trả về mảng có ít nhất 2 phần tử
-  const getGradientColors = (): readonly [ColorValue, ColorValue, ...ColorValue[]] => {
-    if (gradientColors && gradientColors.length >= 2) {
-      return gradientColors as readonly [ColorValue, ColorValue, ...ColorValue[]];
-    }
+  const isOutline = variant === 'outline';
+  const isGradient = variant === 'gradient';
 
+  const getGradientColors = (): readonly [ColorValue, ColorValue, ...ColorValue[]] => {
+    if (gradientColors && gradientColors.length >= 2)
+      return gradientColors as readonly [ColorValue, ColorValue, ...ColorValue[]];
     switch (variant) {
       case 'gradient':
         return ['#FFD600', '#F8BF16', '#FF8000'];
@@ -79,10 +69,8 @@ export const CommonButton: React.FC<CommonButtonProps> = ({
     }
   };
 
-  // ✅ Hàm lấy background color với ưu tiên custom
   const getBackgroundColor = (): string => {
     if (backgroundColor) return backgroundColor;
-    
     switch (variant) {
       case 'primary':
         return colors.primary;
@@ -93,46 +81,164 @@ export const CommonButton: React.FC<CommonButtonProps> = ({
     }
   };
 
-  // ✅ Hàm lấy text color với ưu tiên custom
   const getTextColor = (): string => {
     if (textColor) return textColor;
-    
-    if (disabled) return colors.textDisabled;
-    
-    if (variant === 'outline') {
-      return borderColor || backgroundColor || colors.primary;
-    }
-    
+    if (disabled && variant !== 'outline') return colors.textDisabled;
+    if (variant === 'outline') return borderColor || backgroundColor || colors.primary;
     return colors.onPrimary;
   };
 
-  // ✅ Hàm lấy border color với ưu tiên custom
   const getBorderColor = (): string => {
     if (borderColor) return borderColor;
-    
     if (disabled) return colors.border;
-    
     return backgroundColor || colors.primary;
   };
 
-  const isOutline = variant === 'outline';
-  const isGradient = variant === 'gradient';
+  const finalOpacity = forceOpacity ? 1 : disabled ? 0.5 : 1;
 
-  // ✅ Render button content với dynamic colors
-  const ButtonContent = () => (
-    <View className={`flex-row items-center justify-center gap-2 ${config.paddingX}`}>
-      {loading ? (
-        <ActivityIndicator 
-          color={getTextColor()} 
-          size={config.iconSize} 
+  // --- Reanimated progress ---
+  const progress = useSharedValue(0);
+  const stripesAnim = useSharedValue(0);
+
+  // chạy từ 0 → 100%
+  useEffect(() => {
+    if (!progressDuration || !isActive) {
+      progress.value = 0;
+      stripesAnim.value = 0;
+      return;
+    }
+    
+    // Animation progress bar
+    progress.value = withTiming(1, { 
+      duration: progressDuration, 
+      easing: Easing.linear 
+    });
+    
+    // Animation cho các vạch chéo (loop vô hạn)
+    stripesAnim.value = withRepeat(
+      withTiming(1, { 
+        duration: 1500, 
+        easing: Easing.linear 
+      }),
+      -1, // repeat infinitely
+      false // don't reverse
+    );
+
+    return () => {
+      stripesAnim.value = 0;
+    };
+  }, [progressDuration, isActive]);
+
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+
+  const stripesStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: stripesAnim.value * 20 }],
+  }));
+
+  const handlePress = () => {
+    if (disabled || loading) return;
+    onPress?.();
+  };
+
+  // Tạo các vạch chéo
+  const renderStripes = () => {
+    const stripes = [];
+    const numberOfStripes = 50;
+    const stripeWidth = 10;
+    const gapWidth = 10;
+    const patternWidth = stripeWidth + gapWidth;
+
+    for (let i = 0; i < numberOfStripes; i++) {
+      stripes.push(
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: i * patternWidth,
+            width: stripeWidth,
+            height: '300%',
+            top: '-100%',
+            transform: [{ rotate: '-45deg' }],
+            backgroundColor: 'rgba(0, 0, 0, 0.35)',
+          }}
         />
+      );
+    }
+    return stripes;
+  };
+
+  const renderProgressBar = () => {
+    if (!progressDuration || !isActive) return null;
+    
+    // Lấy borderRadius dựa trên variant
+    const radius = isOutline ? 10 : 10; // outline có border-2, nên trừ đi 2px
+    
+    return (
+      <>
+        {/* Progress background */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            progressStyle,
+            { 
+              overflow: 'hidden', 
+              zIndex: 0, 
+              borderTopLeftRadius: radius,
+              borderBottomLeftRadius: radius,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['#F8BF16', '#F8BF16']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1 }}
+          />
+        </Animated.View>
+
+        {/* Animated stripes */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            progressStyle,
+            { 
+              overflow: 'hidden', 
+              zIndex: 1, 
+              borderTopLeftRadius: radius,
+              borderBottomLeftRadius: radius,
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                left: -15,
+                top: 0,
+                bottom: 0,
+                width: 1000,
+                flexDirection: 'row',
+              },
+              stripesStyle,
+            ]}
+          >
+            {renderStripes()}
+          </Animated.View>
+        </Animated.View>
+      </>
+    );
+  };
+
+  const ButtonContent = () => (
+    <View className={`flex-row items-center justify-center gap-2 ${config.paddingX}`} style={{ zIndex: 2 }}>
+      {loading ? (
+        <ActivityIndicator color={getTextColor()} size={config.iconSize} />
       ) : (
         <>
           {leftIcon}
-          <Text
-            className={`${config.textSize} font-bold`}
-            style={{ color: getTextColor() }}
-          >
+          <Text className={`${config.textSize} font-bold`} style={{ color: getTextColor() }}>
             {title}
           </Text>
           {rightIcon}
@@ -141,36 +247,40 @@ export const CommonButton: React.FC<CommonButtonProps> = ({
     </View>
   );
 
-  // ✅ Outline variant với custom colors
+  // --- Render ---
   if (isOutline) {
     return (
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         disabled={disabled || loading}
         activeOpacity={0.8}
-        className={`${config.height} rounded-xl border-2 justify-center ${className}`}
+        className={`${config.height} justify-center ${className}`}
         style={{
+          borderRadius: 12,
+          borderWidth: 2,
           borderColor: getBorderColor(),
           backgroundColor: 'transparent',
-          opacity: disabled ? 0.5 : 1,
+          opacity: finalOpacity,
+          overflow: 'hidden',
         }}
       >
+        {renderProgressBar()}
         <ButtonContent />
       </TouchableOpacity>
     );
   }
 
-  // ✅ Gradient variant - ĐÃ SỬA LỖI TYPE
   if (isGradient) {
     return (
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         disabled={disabled || loading}
         activeOpacity={0.8}
         className={className}
-        style={{ opacity: disabled ? 0.5 : 1 }}
+        style={{ opacity: finalOpacity }}
       >
-        <View style={{ borderRadius: 12, overflow: 'hidden' }}>
+        <View style={{ borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+          {renderProgressBar()}
           <LinearGradient
             colors={getGradientColors()}
             start={{ x: 0, y: 0 }}
@@ -184,18 +294,21 @@ export const CommonButton: React.FC<CommonButtonProps> = ({
     );
   }
 
-  // ✅ Solid variants (primary, secondary) với custom background
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
       activeOpacity={0.8}
-      className={`${config.height} rounded-xl justify-center shadow-lg ${className}`}
-      style={{
-        backgroundColor: getBackgroundColor(),
-        opacity: disabled ? 0.5 : 1,
+      className={`${config.height} justify-center shadow-lg ${className}`}
+      style={{ 
+        borderRadius: 12,
+        backgroundColor: getBackgroundColor(), 
+        opacity: finalOpacity, 
+        overflow: 'hidden',
+        position: 'relative',
       }}
     >
+      {renderProgressBar()}
       <ButtonContent />
     </TouchableOpacity>
   );

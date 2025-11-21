@@ -1,29 +1,26 @@
-import { CommonButton } from '@/components/common/CommonButton'
+import { CommonButton } from '@/components/common/CommonButton';
+import { showToast } from '@/components/common/CommonToast';
 import { useAppStyle } from '@/hooks/useAppStyles';
-import { Icons } from '@/utils/icons'
-import React from 'react'
-import { View } from 'react-native'
-import Toast from 'react-native-toast-message';
-interface GroupButtonSocialProps {
-  handleGoogleLogin?: () => void;
-  handleFacebookLogin?: () => void;
-}
+import { Icons } from '@/utils/icons';
+import React from 'react';
+import { View } from 'react-native';
+
 export default function GroupButtonSocial() {
   const { colors, textStyles: typography } = useAppStyle();
   const handleGoogleLogin = () => {
-    Toast.show({
+    showToast({
       type: 'success',
-      text1: 'Login with Google',
-      text2: 'This is some something 👋'
-    });
+      title: 'Login with Google',
+      message: 'This is some something 👋'
+    })
   };
 
   const handleFacebookLogin = () => {
-    Toast.show({
+    showToast({
       type: 'success',
-      text1: 'Login with Apple',
-      text2: 'This is some something 👋'
-    });
+      title: 'Login with Facebook',
+      message: 'This is some something 👋'
+    })
   };
   return (
     <View className="flex-col gap-3 mb-6">

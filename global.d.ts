@@ -13,6 +13,11 @@ declare module '@env' {
   export const CORE_API_DOMAIN: string;
   export const ENABLE_LOGGER: string;
   export const APP_ENV: string;
+  export const RECAPTCHA_SITE_KEY : string;
+  export const API_TIMEOUT: string;
+  export const RECAPTCHA_GOOGLE_URL: string;
+  export const RECAPTCHA_BASE_URL: string;
+  export const DOMAIN_MEDIA: string;
 }
 
 declare module '*.png';

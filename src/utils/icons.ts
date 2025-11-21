@@ -94,6 +94,12 @@ import IcCard from '@assets/icons/icon_card.svg';
 import IcNextLarge from '@assets/icons/ic-next-large.svg';
 import IcVote from '@assets/icons/ic-vote.svg';
 import IcWallet from '@assets/icons/ic_wallet.svg';
+import IcAccount_Check from '@assets/icons/ic_account_check.svg';
+import IcSun from '@assets/icons/sun_icon.svg';
+import IcMoon from '@assets/icons/moon_icon.svg';
+import IcHeart from '@assets/icons/heart-icon.svg';
+import IcComment from '@assets/icons/comments-icon.svg';
+import  IcBookmark from '@assets/icons/bookmark-icon.svg';
 export const Icons = {
   IcBlockchain,
   IcCopy,
@@ -191,4 +197,10 @@ export const Icons = {
   IcNextLarge,
   IcVote,
   IcWallet,
+  IcAccount_Check,
+  IcSun,
+  IcMoon,
+  IcHeart,
+  IcComment,
+  IcBookmark
 };

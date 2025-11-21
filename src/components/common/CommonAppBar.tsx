@@ -1,9 +1,9 @@
+import React, { ReactNode } from 'react';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useAppStyle } from '@/hooks/useAppStyles';
 import { Icons } from '@/utils/icons';
-import { useNavigation } from '@react-navigation/native';
-import React, { ReactNode } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface CommonAppBarProps {
   title?: string;
@@ -42,13 +42,31 @@ export default function CommonAppBar({
     }
   };
 
+  // // 🌙 Shadow đẹp trên cả iOS & Android
+  // const shadowStyle = Platform.select({
+  //   ios: {
+  //     shadowColor: '#000',
+  //     shadowOffset: { width: 0, height: 3 },
+  //     shadowOpacity: 0.15,
+  //     shadowRadius: 3,
+  //   },
+  //   android: {
+  //     elevation: 4,
+  //   },
+  // });
+
   return (
-    <SafeAreaView edges={['top']}>
+    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
       <View
         className={`flex-row items-center justify-between h-14 px-4 ${className}`}
-        style={[{ backgroundColor:'#121212' }, style]}
+        style={[
+          {
+            backgroundColor: colors.background, // ✅ tự nhận từ theme
+          },
+          style,
+        ]}
       >
-        {/* Left Section - Back Button or Custom Left Content */}
+        {/* Left Section - Back Button hoặc custom content */}
         <View className="flex-1 items-start">
           {left || (showBack && (
             <TouchableOpacity
@@ -56,7 +74,7 @@ export default function CommonAppBar({
               className="w-8 h-8 items-center justify-center rounded-lg"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Icons.IcBack width={24} height={24} color='#fff' />
+              <Icons.IcBack width={24} height={24} color={colors.text} />
             </TouchableOpacity>
           ))}
         </View>
@@ -66,7 +84,7 @@ export default function CommonAppBar({
           {title && (
             <Text
               className="text-lg font-semibold"
-              style={{ color:'#fff' }}
+              style={[textStyles.H02Bold, { color: colors.text }]}
               numberOfLines={1}
             >
               {title}

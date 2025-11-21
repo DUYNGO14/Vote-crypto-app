@@ -1,121 +1,128 @@
 import { CommonButton } from '@/components/common/CommonButton';
 import { CommonInput } from '@/components/common/CommonInput';
+import { showToast } from '@/components/common/CommonToast';
 import { AuthLayout } from '@/components/layouts/Auth/AuthLayout';
+import { RESET_PASSWORD } from '@/constants/purpose';
 import { useAppStyle } from '@/hooks/useAppStyles';
-import { isEmailOrPhone } from '@/hooks/validate';
+import { isValidEmail } from '@/hooks/validate';
 import { AuthStackParamList } from '@/navigation/types';
-import { AuthFooter } from '@/screens/Auth/components/AuthFooter';
 import GroupButtonSocial from '@/screens/Auth/components/GroupButtonSocial';
 import HeaderAuth from '@/screens/Auth/components/HeaderAuth';
-import { useNavigation } from '@react-navigation/native';
+import { forgotPasswordAction, selectForgotPassword } from '@/store/reducers/authSlice';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import React, { useState } from 'react';
-import {
-  Text,
-  View
-} from 'react-native';
-import { useDispatch } from 'react-redux';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 
 type NavigationProp = StackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, textStyles } = useAppStyle();
+  const { colors } = useAppStyle();
   const [username, setUsername] = useState('');
   const [errors, setErrors] = useState({ username: '' });
   const dispatch = useDispatch();
+  const { status, error, data , params} = useSelector(selectForgotPassword);
+  console.log('[FORGOT PASSWORD]', status, error, data, params);
+  // 🧹 Khi rời khỏi màn hình => reset form
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setUsername('');
+        setErrors({ username: '' });
+      };
+    }, [])
+  );
+
+  useEffect(() => {
+    if (status === 'error' && error) {
+      showToast({ type: 'error', title: 'Error', message: error });
+    }
+
+    if (status === 'success' && data) {
+      showToast({ type: 'success', title: 'Success', message: data.message });
+      navigation.navigate('VerifyOtp', { email: username, type: RESET_PASSWORD });
+    }
+  }, [status, error]);
+
+  // 🧾 Reset thủ công khi bấm nút Reset
+  const handleReset = () => {
+    setUsername('');
+    setErrors({ username: '' });
+  };
 
   const handleForgotPassword = () => {
     let hasError = false;
     const newErrors = { username: '' };
 
     if (!username.trim()) {
-      newErrors.username = 'Please enter your email or phone number';
+      newErrors.username = 'Please enter your email.';
       hasError = true;
-    } else {
-      const inputType = isEmailOrPhone(username.trim());
-      
-      if (inputType === 'invalid') {
-        newErrors.username = 'Please enter a valid email or phone number';
-        hasError = true;
-      }
+    } else if (!isValidEmail(username.trim())) {
+      newErrors.username = 'Please enter a valid email.';
+      hasError = true;
     }
 
     setErrors(newErrors);
 
     if (!hasError) {
-      const inputType = isEmailOrPhone(username.trim());
-      console.log('Forgot Password:', { 
-        username, 
-        type: inputType 
-      });
-      
+      console.log('Forgot Password:', { username });
+      // dispatch(forgotPasswordAction({
+      //   email: username,
+      //   recaptcha: '',
+      // }));
+      navigation.navigate('VerifyOtp', { email: username, type: RESET_PASSWORD });
     }
   };
-
-  // Helper text hiển thị gợi ý
-  const getHelperText = () => {
-    if (!username.trim()) return null;
-    
-    const inputType = isEmailOrPhone(username.trim());
-    
-    switch (inputType) {
-      case 'email':
-        return { text: '✓ Valid email format', color: colors.success };
-      case 'phone':
-        return { text: '✓ Valid phone format', color: colors.success };
-      case 'invalid':
-        return { text: 'Please enter a valid email or phone number', color: colors.error };
-      default:
-        return null;
-    }
-  };
-
-  const helperText = getHelperText();
 
   return (
     <AuthLayout>
-      <HeaderAuth 
-        title="Forgot Password!" 
-        subtitle="Let's reset your password quickly" 
+      <HeaderAuth
+        title="Forgot Password!"
+        subtitle="Let's reset your password quickly"
       />
-      
-      {/* Form Card */}
+
       <View className="p-2">
+        {/* Email input */}
         <CommonInput
-          label="Email or Phone Number"
-          placeholder="Enter your email or phone number"
+          label="Email"
+          placeholder="Enter your email."
           value={username}
           onChangeText={(text) => {
             setUsername(text);
             setErrors({ ...errors, username: '' });
           }}
-          isRequired={true}
+          isRequired
           error={errors.username}
-          helperText={helperText?.text}
-          helperTextColor={helperText?.color}
           autoCapitalize="none"
-          keyboardType="email-address" // Sử dụng email-address để hiển thị bàn phím phù hợp
+          keyboardType="email-address"
         />
 
         {/* Info Text */}
         <View className="mb-6 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <Text 
+          <Text
             className="text-sm"
             style={{ color: colors.textSecondary }}
           >
-            We will send a verification code to your email or phone to reset your password.
+            We will send a verification code to your email to reset your password.
           </Text>
         </View>
 
-        {/* Send Button */}
+        {/* Buttons */}
         <CommonButton
           title="Send Verification Code"
           onPress={handleForgotPassword}
           variant="gradient"
           size="large"
-          // loading={status === 'loading'}
-          // disabled={status === 'loading'}
+          className="mb-3"
+        />
+
+        <CommonButton
+          title="Reset"
+          onPress={handleReset}
+          variant="outline"
+          size="large"
           className="mb-6"
         />
 
@@ -151,8 +158,8 @@ export default function ForgotPasswordScreen() {
           />
         </View>
 
-        {/* Social Login Buttons */}
-        <GroupButtonSocial />
+        {/* Social login */}
+        <GroupButtonSocial  />
       </View>
     </AuthLayout>
   );

@@ -1,0 +1,10 @@
+export const CORE_LOGIN_ENDPOINT = "/auth/login";
+export const CORE_SIGNUP_ENDPOINT = "/auth/register";
+export const CORE_LOGIN_GOOGLE_ENDPOINT = "/auth/login/google";
+export const CORE_CHECK_REFRESH_TOKEN_ENDPOINT = "/auth/login/refreshToken";
+export const CORE_VERIFY_OTP_ENDPOINT = "/auth/verify-otp";
+export const CORE_SEND_OTP_ENDPOINT = "/auth/send-otp";
+export const CORE_LOGOUT_ENDPOINT = "/auth/logout";
+export const CORE_LOGOUT_ALL_ENDPOINT = "/auth/logout/all";
+export const CORE_RESET_PASSWORD_ENDPOINT = "/auth/reset-password";
+export const CORE_AUTH_DEVICES_ENDPOINT = "/auth/user/devices";

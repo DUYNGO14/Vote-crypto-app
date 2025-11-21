@@ -40,9 +40,9 @@ export const AuthFooter: React.FC<AuthFooterProps> = ({
     <View className="flex-row justify-center items-center flex-wrap">
       {/* Terms & Conditions */}
       <TouchableOpacity onPress={onTermsPress} className="mx-2 my-1">
-        <Text 
+        <Text
           style={[
-            { color: colors.textSecondary }, 
+            { color: colors.textSecondary },
             textStyles.Text,
             { fontSize: isSmallScreen ? 12 : 14 }
           ]}
@@ -58,9 +58,9 @@ export const AuthFooter: React.FC<AuthFooterProps> = ({
 
       {/* Privacy Policy */}
       <TouchableOpacity onPress={onPrivacyPress} className="mx-2 my-1">
-        <Text 
+        <Text
           style={[
-            { color: colors.textSecondary }, 
+            { color: colors.textSecondary },
             textStyles.Text,
             { fontSize: isSmallScreen ? 12 : 14 }
           ]}
@@ -76,9 +76,9 @@ export const AuthFooter: React.FC<AuthFooterProps> = ({
 
       {/* Legal Notices */}
       <TouchableOpacity onPress={onLegalPress} className="mx-2 my-1">
-        <Text 
+        <Text
           style={[
-            { color: colors.textSecondary }, 
+            { color: colors.textSecondary },
             textStyles.Text,
             { fontSize: isSmallScreen ? 12 : 14 }
           ]}
