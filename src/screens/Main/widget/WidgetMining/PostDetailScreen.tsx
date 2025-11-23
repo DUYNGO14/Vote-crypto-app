@@ -1,6 +1,6 @@
 import CommonAppBar from "@/components/common/CommonAppBar";
 import { useAppStyle } from "@/hooks/useAppStyles";
-import { makeSelectNewsDetail, newsDetailAction } from "@/store/reducers/newsSlice";
+import { makeSelectNewsDetail, newsDetailAction, viewerCountAction } from "@/store/reducers/newsSlice";
 import { Icons } from "@/utils/icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
@@ -35,6 +35,13 @@ export default function PostDetailScreen() {
   const { colors, textStyles } = useAppStyle();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      dispatch(viewerCountAction({ newsId: postId }));
+      clearTimeout(timer);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [dispatch, postId]);
   useEffect(() => {
     dispatch(newsDetailAction({ newsId: postId }));
   }, [dispatch, postId]);

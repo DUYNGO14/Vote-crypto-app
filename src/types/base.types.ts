@@ -16,7 +16,7 @@ export type BasePagination<P = Record<string, never>> = {
 export interface BasePaginationParams {
   page: number;
   limit: number;
-  isLoadMore?: boolean;
+  isLoadMore: boolean;
 }
 
 export interface BaseInitState<T = any> {

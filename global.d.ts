@@ -18,6 +18,7 @@ declare module '@env' {
   export const RECAPTCHA_GOOGLE_URL: string;
   export const RECAPTCHA_BASE_URL: string;
   export const DOMAIN_MEDIA: string;
+  export const REOWN_PROJECT_ID: string
 }
 
 declare module '*.png';

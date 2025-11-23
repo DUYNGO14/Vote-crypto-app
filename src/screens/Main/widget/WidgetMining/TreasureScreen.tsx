@@ -3,11 +3,9 @@ import { CommonButton } from '@/components/common/CommonButton';
 import { useAppStyle } from '@/hooks/useAppStyles';
 import { useFormatCoin } from '@/hooks/useFormatCoin';
 import CardTreasure from '@/screens/Main/components/Treasure/CardTreasure';
-import { Icons } from '@/utils/icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
-
+import { FlatList, Text, View } from 'react-native';
 
 export default function TreasureScreen() {
   const navigation = useNavigation();

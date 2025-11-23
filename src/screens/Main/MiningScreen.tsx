@@ -84,7 +84,7 @@ const MiningScreen = () => {
       >
         <MiningHeader />
         {/* LOGO */}
-        <MiningLogo isMining = {statusMining?.isMining || false} />
+        <MiningLogo isMining />
         {/* Action start */}
         <MiningStartAction />
         {/* Action claim */}

@@ -6,7 +6,8 @@ import {
   API_TIMEOUT,
   RECAPTCHA_GOOGLE_URL,
   RECAPTCHA_BASE_URL,
-  DOMAIN_MEDIA
+  DOMAIN_MEDIA,
+  REOWN_PROJECT_ID
 } from '@env';
 
 export const Config = {
@@ -18,4 +19,5 @@ export const Config = {
   google_lib: RECAPTCHA_GOOGLE_URL,
   domain_name: RECAPTCHA_BASE_URL,
   domain_media: DOMAIN_MEDIA,
+  reown_project_id: REOWN_PROJECT_ID
 };

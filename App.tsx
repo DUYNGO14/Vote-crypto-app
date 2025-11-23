@@ -20,7 +20,7 @@ const AppContent = () => {
   }, []);
 
   return (
-    <View 
+    <View
       style={{ backgroundColor: colors.background || (isDark ? '#000' : '#fff'), flex: 1 }}
       onLayout={onLayoutRootView}
     >
@@ -55,7 +55,7 @@ export default function App() {
     <ReduxProviders>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <SafeAreaProvider> {/* <- thêm flex:1 ở đây nếu cần */}
+          <SafeAreaProvider>
             <AppContent />
             <CommonToast />
           </SafeAreaProvider>

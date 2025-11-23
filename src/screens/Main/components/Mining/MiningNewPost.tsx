@@ -4,16 +4,17 @@ import { LOADING_STATUS } from '@/constants/status';
 import { useAppStyle } from '@/hooks/useAppStyles';
 import CardPost from '@/screens/Main/components/Mining/CardPost';
 import { makeSelectNewsList, newsListAction } from '@/store/reducers/newsSlice';
+import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 
 
 const ItemSeparator = () => <View style={{ width: 12 }} />;
-const EmptyList = ({ message }: { message: string }) => (
+export const EmptyList = ({ message }: { message: string }) => (
   <Text style={{ color: '#aaa', fontSize: 14 }}>{message}</Text>
 );
-const ErrorMessage = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
+export const ErrorMessage = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
   <View className="bg-red-50 p-3 rounded-lg border border-red-200 my-2">
     <Text className="text-red-700 text-sm">{message}</Text>
     <TouchableOpacity
@@ -25,14 +26,12 @@ const ErrorMessage = ({ message, onRetry }: { message: string; onRetry: () => vo
   </View>
 );
 export default function MiningNewPost() {
+  const navigation = useNavigation<any>();
   const { colors, textStyles } = useAppStyle();
   const dispatch = useDispatch();
   const { status, data, error } = useSelector(makeSelectNewsList);
-  console.log("[MINING NEW POST] STATUS", status);
-  console.log("[MINING NEW POST] DATA", data);
-  console.log("[MINING NEW POST] ERROR", error);
   useEffect(() => {
-    dispatch(newsListAction({ page: 1, limit: 10 }));
+    dispatch(newsListAction({ page: 1, limit: 10, isLoadMore: false }));
   }, [])
 
   const renderItem = useCallback(
@@ -55,7 +54,7 @@ export default function MiningNewPost() {
     />
   );
   const handleRetry = useCallback(() => {
-    dispatch(newsListAction({ page: 1, limit: 10 }));
+    dispatch(newsListAction({ page: 1, limit: 10, isLoadMore: false }));
   }, [dispatch]);
   return (
     <View className="flex-col justify-center gap-2 w-full px-4 my-6">
@@ -63,12 +62,17 @@ export default function MiningNewPost() {
         <Text style={textStyles.H01Bold} className="flex-1 pr-2">
           Getting started with Voting crypto
         </Text>
-        <Text
-          style={[textStyles.H01Bold, { color: colors.primary }]}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('NewsScreen')}
           className="shrink-0"
         >
-          See all
-        </Text>
+          <Text
+            style={[textStyles.H01Bold, { color: colors.primary }]}
+            className="shrink-0"
+          >
+            See all
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {error ? (

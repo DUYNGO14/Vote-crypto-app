@@ -26,7 +26,8 @@ const newsApi = {
     newsId: string,
   ): Promise<BaseApiResponse<{success: boolean; message?: string}>> => {
     const response = await api.post(
-      `${newsEndpoint.CORE_NEWS_COUNT_VIEW_ENDPOINT}?newsId=${newsId}`,
+      newsEndpoint.CORE_NEWS_COUNT_VIEW_ENDPOINT,
+      { newsId }
     );
     if (response.success && response.data) {
       return response;

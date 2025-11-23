@@ -29,18 +29,18 @@ export default function CardPost({ data }: CardPostProps) {
       onPress={handlePress}
       activeOpacity={0.7}
     >
-      <View className="bg-[#1E1E1E] w-[177px] h-[220px] rounded-2xl p-2 gap-2 justify-between"
+      <View className="bg-[#1E1E1E] w-[177px] h-[240px] rounded-2xl p-2 gap-2 justify-between"
         style={{ backgroundColor: colors.cardDark }}>
         {/* Thumbnail */}
         <Image
           source={{ uri: `${Config.domain_media}${data.cover.path}` }}
-          className="w-full h-[87px] rounded-lg overflow-hidden bg-[#F5F5F5]"
+          className="w-full h-[120px] rounded-lg overflow-hidden bg-[#F5F5F5]"
           style={{ resizeMode: 'cover' }}
         />
 
         {/* Title */}
         <Text
-          className="text-sm font-bold h-10"
+          className="text-sm font-bold h-12"
           style={{ color: colors.text }}
           numberOfLines={2}
           ellipsizeMode="tail"
